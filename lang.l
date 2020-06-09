@@ -1,4 +1,6 @@
 %{
+#include <string.h>
+#include "compiler.h"
 #include "y.tab.h"
 
 int debugl(int i, char *s);
@@ -61,6 +63,7 @@ num (0|[1-9][0-9]*)(\.[0-9]*)?
 }
 [+-/*(){}=><;,] {
     debugl(yytext[0], yytext);
+    yylval.INT=yytext[0];
     return(yytext[0]);
 }
 "==" {
@@ -81,10 +84,12 @@ num (0|[1-9][0-9]*)(\.[0-9]*)?
 }
 {id} {
     debugl(T_ID, yytext);
+	strcpy(yylval.STR, yytext);
     return(T_ID);
 }
 {num} {
     debugl(T_NUM, yytext);
+	strcpy(yylval.STR, yytext);
     return(T_NUM);
 }
 {ws} {
