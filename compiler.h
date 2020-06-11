@@ -17,10 +17,11 @@ typedef struct struct_node {
     union {
         int ivalue;                 // When nt=T_NUM, et=ET_INT
         float fvalue;    	        // When nt=T_NUM, ET_FLOAT
-        char *svalue;   	        // When nt=T_ID
-        pointer_array st;           // When nt=COMP_STMT, symbol table
+        char *svalue;   	        // When nt=T_ID and we're in a declaration
+        pointer_array st;           // When nt=COMP_STMT; symbol table
     };
     struct struct_node *pn, *pcs;   // Parent node, parent compount statement
+    struct struct_node *ps;         // Parent symbol; if NULL, it can't be LVAL
     pointer_array cn;               // child nodes
 } node;
 

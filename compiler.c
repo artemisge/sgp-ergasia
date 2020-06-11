@@ -125,10 +125,13 @@ void semantic_analysis(node *n) {
             }
             add_to_symbol_table(n->cn.nodes[1], et);
             break;
-/*        case T_ID:
-            comp = search_parent(type=COMP_STMT);
-            n->symbol = search_in_symbol_table(&pcs->st, n->svalue);
-            break;* */
+        case T_ID:
+            if (n->pcs != NULL) {    // Don't process program name
+                n->ps = search_symbol(n, n->svalue, 0);
+                n->et = n->ps->et;
+            }
+
+            break;
     };
     for (i = 0; i < n->cn.length; i++)
         semantic_analysis(n->cn.nodes[i]);
@@ -158,7 +161,7 @@ void print_tree(node *n, int depth) {
                 printf("const-float: %f\n", n->fvalue);
             break;
         case T_ID:
-            printf("id: %s\n", n->svalue);
+            printf("id: %s,%d,%p\n", n->svalue, n->et, n->ps);
             break;
         default:
             if (n->nt >= 32 && n->nt < 128)
