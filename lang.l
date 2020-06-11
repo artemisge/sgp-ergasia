@@ -2,8 +2,6 @@
 #include <string.h>
 #include "compiler.h"
 #include "y.tab.h"
-
-int debugl(int i, char *s);
 %}
 
 letter [a-zA-Z]
@@ -84,12 +82,12 @@ num (0|[1-9][0-9]*)(\.[0-9]*)?
 }
 {id} {
     debugl(T_ID, yytext);
-	strcpy(yylval.STR, yytext);
+    strcpy(yylval.STR, yytext);
     return(T_ID);
 }
 {num} {
     debugl(T_NUM, yytext);
-	strcpy(yylval.STR, yytext);
+    strcpy(yylval.STR, yytext);
     return(T_NUM);
 }
 {ws} {
@@ -99,7 +97,3 @@ num (0|[1-9][0-9]*)(\.[0-9]*)?
 }
 
 %%
-
-int debugl(int i, char *s) {
-    printf("[%d,%s]", i, s);
-}

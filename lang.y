@@ -5,8 +5,6 @@
 
 extern int yylex(void);
 extern int yyparse(void);
-extern void yyerror(const char *msg);
-node *root;
 %}
 
 %union {
@@ -107,21 +105,3 @@ FACTOR: '(' EXPR ')'  { $$ = $2; }
 | T_NUM { $$ = create_num_node($1); };
 
 %%
-
-void yyerror(const char *msg)
-{
-  fprintf(stderr, "McChris language error: %s\n", msg);
-  exit(1);
-}
-
-int yywrap(void) {
-    return 1;
-}
-
-int main ()
-{
-  yyparse();
-  printf("\n");
-  semantic_analysis(root);
-  print_tree(root, 0);
-}
