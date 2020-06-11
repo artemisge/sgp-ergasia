@@ -6,6 +6,7 @@
 #include "y.tab.h"
 
 node *root;
+static int vi=0;
 
 // Add all T_ID symbols below n to the current symbol table
 void add_to_symbol_table(node *n, expr_type et) {
@@ -15,6 +16,8 @@ void add_to_symbol_table(node *n, expr_type et) {
         }
         n->et = et;
         push_pointer_array(&n->pcs->st, n);
+        // Number variables for assembly generation
+        n->vi = vi++;
     } else {
         for (int i = 0; i < n->cn.length; i++) {
             n->cn.nodes[i]->pcs = n->pcs;       // Parent compound statement isn't set yet so low, set it
@@ -32,13 +35,12 @@ void assemble(node *n) {
                 "BUF2\tCON\t0\n"
                 "BUF3\tCON\t0\n"
                 "TMP\tEQU\t3000\n"
-                "BUF\tEQU\t3001\n"
-                "V1\tEQU\t2000\n"
-                "V2\tEQU\t2001\n"
-                "V3\tEQU\t2002\n"
-                "V4\tEQU\t2003\n"
+                "BUF\tEQU\t3001\n", n->cn.nodes[0]->svalue);
+            for (int i = 0; i < vi; i++)
+                printf("V%d\tEQU\t%d\n", i, 2000+i);
+            printf(
                 "\tORIG\t100\n"
-                "MAIN\tNOP\n", n->cn.nodes[0]->svalue);
+                "MAIN\tNOP\n");
             break;
     }
     for (int i = 0; i < n->cn.length; i++) {
@@ -135,7 +137,7 @@ void print_tree(node *n, int depth) {
             printf("UMINUS: %d\n", n->et);
             break;
         case T_ID:
-            printf("T_ID: %s,%d,%p\n", n->svalue, n->et, n->ps);
+            printf("T_ID: %s,%d,V%d\n", n->svalue, n->et, n->vi);
             break;
         case T_NUM:
             if (n->et == ET_INT)
@@ -239,6 +241,7 @@ void semantic_top_down(node *n) {
             if (n->pcs != NULL) {    // Don't process program name
                 n->ps = search_symbol(n, n->svalue, 0);
                 n->et = n->ps->et;
+                n->vi = n->ps->vi;
             }
             break;
     };
