@@ -18,7 +18,7 @@ typedef struct struct_node {
     union {
         int ivalue;                // When nt=T_NUM, et=ET_INT
         float fvalue;              // When nt=T_NUM, ET_FLOAT
-        char *svalue;              // When nt=T_ID and we're in a declaration
+        char *svalue;              // When nt=T_ID
         pointer_array st;          // When nt=COMP_STMT; symbol table
     };
     struct struct_node *pn, *pcs;  // Parent node, parent compound statement
@@ -27,7 +27,7 @@ typedef struct struct_node {
 } node;
 
 void add_to_symbol_table(node *n, expr_type et);
-//void assemble(node *n);
+void assemble(node *n);
 node *create_node(node_type nt, node *c0, node *c1, node *c2, node *c3);
 node *create_num_node(char *str);
 node *create_str_node(char *str);
@@ -37,7 +37,8 @@ void *pop_pointer_array(pointer_array *pa);
 void print_tree(node *n, int depth);
 void push_pointer_array(pointer_array *pa, void *p);
 node *search_symbol(node *n, char *s, char local);
-void semantic_analysis(node *n);
+void semantic_bottom_up(node *n);
+void semantic_top_down(node *n);
 void yyerror(const char *msg);
 int yylex(void);
 int yyparse(void);

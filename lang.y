@@ -22,7 +22,7 @@
 %left <INT> T_EQEQ T_LEQ T_NE T_GE '>' '<'
 %left <INT> '+' '-'
 %left <INT> '*' '/'
-%left <INT> T_UMINUS
+%left <INT> UMINUS
 
 %%                   /* beginning of rules section */
 
@@ -97,7 +97,7 @@ TERM: TERM '*' FACTOR { $$ = create_node($2, $1, $3, NULL, NULL); }
 | FACTOR  { $$ = $1; };
 
 FACTOR: '(' EXPR ')'  { $$ = $2; }
-| T_UMINUS FACTOR { $$ = create_node(T_UMINUS, $2, NULL, NULL, NULL); }
+| '-' FACTOR { $$ = create_node(UMINUS, $2, NULL, NULL, NULL); }
 | T_ID   { $$ = create_str_node($1); }
 | T_NUM { $$ = create_num_node($1); };
 

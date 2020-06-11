@@ -23,6 +23,36 @@ void add_to_symbol_table(node *n, expr_type et) {
     }
 }
 
+void assemble(node *n) {
+    switch (n->nt) {
+        case PROGRAM:
+            printf(
+                "* PROGRAM %s\n"
+                "BUF1\tCON\t0\n"
+                "BUF2\tCON\t0\n"
+                "BUF3\tCON\t0\n"
+                "TMP\tEQU\t3000\n"
+                "BUF\tEQU\t3001\n"
+                "V1\tEQU\t2000\n"
+                "V2\tEQU\t2001\n"
+                "V3\tEQU\t2002\n"
+                "V4\tEQU\t2003\n"
+                "\tORIG\t100\n"
+                "MAIN\tNOP\n", n->cn.nodes[0]->svalue);
+            break;
+    }
+    for (int i = 0; i < n->cn.length; i++) {
+        assemble(n->cn.nodes[i]);
+    }
+    switch (n->nt) {
+        case PROGRAM:
+            printf(
+                "\tHLT\n"
+	            "\tEND\tMAIN");
+            break;
+    }
+}
+
 node *create_node(node_type nt, node *c0, node *c1, node *c2, node *c3) {
     node *n;
 
@@ -95,14 +125,23 @@ void print_tree(node *n, int depth) {
             }
             printf(")\n");
             break;
+        case '+':
+        case '-':
+        case '*':
+        case '/':
+            printf("%c: %d\n", n->nt, n->et);
+            break;
+        case UMINUS:
+            printf("UMINUS: %d\n", n->et);
+            break;
+        case T_ID:
+            printf("T_ID: %s,%d,%p\n", n->svalue, n->et, n->ps);
+            break;
         case T_NUM:
             if (n->et == ET_INT)
                 printf("const-int: %d\n", n->ivalue);
             else
                 printf("const-float: %f\n", n->fvalue);
-            break;
-        case T_ID:
-            printf("id: %s,%d,%p\n", n->svalue, n->et, n->ps);
             break;
         default:
             if (n->nt >= 32 && n->nt < 128)
@@ -144,7 +183,33 @@ node *search_symbol(node *n, char *s, char local) {
         return search_symbol(n->pcs, s, local);
 }
 
-void semantic_analysis(node *n) {
+void semantic_bottom_up(node *n) {
+    int i;
+
+    for (i = 0; i < n->cn.length; i++)
+        semantic_bottom_up(n->cn.nodes[i]);
+    switch (n->nt) {
+        case ASSIGN_EXPR:
+            if (n->cn.nodes[0]->et == ET_INT && n->cn.nodes[1]->et == ET_FLOAT)
+                die("Can't assign float to int! UwU");
+            n->et = n->cn.nodes[0]->et;
+            break;
+        case '+':
+        case '-':
+        case '*':
+        case '/':
+            if (n->cn.nodes[0]->et == ET_INT && n->cn.nodes[1]->et == ET_INT)
+                n->et = ET_INT;
+            else
+                n->et = ET_FLOAT;
+            break;
+        case UMINUS:
+            n->et = n->cn.nodes[0]->et;
+            break;
+    }
+}
+
+void semantic_top_down(node *n) {
     int i;
     expr_type et;
 
@@ -175,17 +240,16 @@ void semantic_analysis(node *n) {
                 n->ps = search_symbol(n, n->svalue, 0);
                 n->et = n->ps->et;
             }
-
             break;
     };
     for (i = 0; i < n->cn.length; i++)
-        semantic_analysis(n->cn.nodes[i]);
+        semantic_top_down(n->cn.nodes[i]);
 }
 
 void yyerror(const char *msg)
 {
-  fprintf(stderr, "McChris language error: %s\n", msg);
-  exit(1);
+    fprintf(stderr, "McChris language error: %s\n", msg);
+    exit(1);
 }
 
 int yywrap(void) {
@@ -196,6 +260,8 @@ int main ()
 {
     yyparse();
     printf("\n");
-    semantic_analysis(root);
+    semantic_top_down(root);
+    semantic_bottom_up(root);
     print_tree(root, 0);
+    assemble(root);
 }
