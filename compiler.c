@@ -56,12 +56,15 @@ node *create_num_node(char *str) {
 
 node *create_str_node(char *str) {
     node *n;
+
     n = create_node(T_ID, NULL, NULL, NULL, NULL);
     n->svalue = strdup(str);
+
+    return n;
 }
 
 int debugl(int i, char *s) {
-    printf("[%d,%s]", i, s);
+    //printf("[%d,%s]", i, s);
 }
 
 void die(char *msg) {
@@ -191,8 +194,8 @@ int yywrap(void) {
 
 int main ()
 {
-  yyparse();
-  printf("\n");
-  semantic_analysis(root);
-  print_tree(root, 0);
+    yyparse();
+    printf("\n");
+    semantic_analysis(root);
+    print_tree(root, 0);
 }

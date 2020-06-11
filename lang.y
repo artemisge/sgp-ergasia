@@ -2,9 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "compiler.h"
-
-extern int yylex(void);
-extern int yyparse(void);
 %}
 
 %union {

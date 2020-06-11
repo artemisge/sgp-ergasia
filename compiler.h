@@ -39,6 +39,8 @@ void push_pointer_array(pointer_array *pa, void *p);
 node *search_symbol(node *n, char *s, char local);
 void semantic_analysis(node *n);
 void yyerror(const char *msg);
+int yylex(void);
+int yyparse(void);
 int yywrap(void);
 
 extern node *root;
