@@ -121,6 +121,7 @@ int yywrap(void) {
 int main ()
 {
   yyparse();
+  printf("\n");
   semantic_analysis(root);
   print_tree(root, 0);
 }

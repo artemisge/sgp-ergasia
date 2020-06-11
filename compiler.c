@@ -26,12 +26,14 @@ node *create_node(node_type nt, node *c0, node *c1, node *c2, node *c3) {
 
     // printf("Creating node (%d, %p, %p, %p, %p)\n", nt, c0, c1, c2, c3);
     n = (node *)malloc(sizeof(node));
+    memset(n, 0, sizeof(node));
     n->nt = nt;
-    n->et = ET_NONE;
-    n->children[0] = c0;
-    n->children[1] = c1;
-    n->children[2] = c2;
-    n->children[3] = c3;
+    if (c0) push_pointer_array(&n->cn, c0);
+    if (c1) push_pointer_array(&n->cn, c1);
+    if (c2) push_pointer_array(&n->cn, c2);
+    if (c3) push_pointer_array(&n->cn, c3);
+
+    return n;
 }
 
 node *create_num_node(char *str) {
@@ -62,63 +64,74 @@ void die(char *msg) {
     exit(1);
 }
 
-node *search_in_symbol_table(pointer_array *pa, char *s) {
-    for (int i = 0; i < pa->length; i++) {
-        if (strcmp(s, pa->nodes[i]->svalue) == 0) {
-            return pa->nodes[i];
+node *search_symbol(node *n, char *s, char local) {
+    pointer_array *st;
+
+    if (n->nt == COMP_STMT)
+        st = &n->st;
+    else
+        st = &n->pcs->st;
+
+    for (int i = 0; i < st->length; i++) {
+        if (strcmp(s, st->nodes[i]->svalue) == 0) {
+            return st->nodes[i];
         }
     }
-    return NULL;
+    if (local || n->pcs == NULL)
+        return NULL;
+    else
+        return search_symbol(n->pcs, s, local);
 }
 
-void add_to_symbol_table(pointer_array *pa, expr_type et, node *n) {
+// Add all T_ID symbols below n to the current symbol table
+void add_to_symbol_table(node *n, expr_type et) {
     if (n->nt == T_ID) {
-        if (search_in_symbol_table(pa, n->svalue) != NULL) {
+        if (search_symbol(n, n->svalue, 1) != NULL) {
             die("This variable has been declared before! IDIOT!");
         }
         n->et = et;
-        push_pointer_array(pa, n);
+        push_pointer_array(&n->pcs->st, n);
     } else {
-        for (int i = 0; i < 4; i++)
-            if (n->children[i] != NULL)
-                add_to_symbol_table(pa, et, n->children[i]);
+        for (int i = 0; i < n->cn.length; i++) {
+            n->cn.nodes[i]->pcs = n->pcs;       // Parent compount statement isn't set yet so low, set it
+            add_to_symbol_table(n->cn.nodes[i], et);
+        }
     }
 }
 
 void semantic_analysis(node *n) {
     int i;
     expr_type et;
-    node *pcs;      // Parent compount statement
 
     if (n == NULL)
         return;
-    for (i = 0; i < 4; i++)
-        if (n->children[i] != NULL)
-            n->children[i]->parent = n;
+    for (i = 0; i < n->cn.length; i++) {
+        n->cn.nodes[i]->pn = n;
+        if (n->nt == COMP_STMT)
+            n->cn.nodes[i]->pcs = n;
+        else
+            n->cn.nodes[i]->pcs = n->pcs;
+    }
     switch (n->nt) {
         case COMP_STMT:
             memset(&n->st, 0, sizeof(n->st));
             break;
         case DECLARATION:
-            pcs = n->parent;
-            while (pcs->nt != COMP_STMT) {
-                pcs = pcs->parent;
-            };
-            if (n->children[0]->nt == T_INT)
+            if (n->cn.nodes[0]->nt == T_INT)
                 et = ET_INT;
             else {
-                assert(n->children[0]->nt == T_FLOAT);
+                assert(n->cn.nodes[0]->nt == T_FLOAT);
                 et = ET_FLOAT;
             }
-            add_to_symbol_table(&pcs->st, et, n->children[1]);
+            add_to_symbol_table(n->cn.nodes[1], et);
             break;
 /*        case T_ID:
             comp = search_parent(type=COMP_STMT);
             n->symbol = search_in_symbol_table(&pcs->st, n->svalue);
-            break;*/
+            break;* */
     };
-    for (i = 0; i < 4; i++)
-        semantic_analysis(n->children[i]);
+    for (i = 0; i < n->cn.length; i++)
+        semantic_analysis(n->cn.nodes[i]);
 }
 
 void print_tree(node *n, int depth) {
@@ -129,13 +142,12 @@ void print_tree(node *n, int depth) {
     printf("%*s", 2*depth, "");
     switch (n->nt) {
         case PROGRAM:
-            printf("mainclass %s\n", n->children[0]->svalue);
+            printf("mainclass %s\n", n->cn.nodes[0]->svalue);
             break;
         case COMP_STMT:
-            // COMP_STMT, st=(int a, int k, float x, int y)
             printf("COMPOUNT STATEMENT, st=(");
             for (int i = 0; i < n->st.length; i++) {
-                printf("%s %s, ", n->st.nodes[i]->et, n->st.nodes[i]->svalue);
+                printf("%d %s, ", n->st.nodes[i]->et, n->st.nodes[i]->svalue);
             }
             printf(")\n");
             break;
@@ -154,7 +166,7 @@ void print_tree(node *n, int depth) {
             else
                 printf("Node %d\n", n->nt);
     };
-    for (i = 0; i < 4; i++) {
-        print_tree(n->children[i], depth+1);
+    for (i = 0; i < n->cn.length; i++) {
+        print_tree(n->cn.nodes[i], depth+1);
     }
 }

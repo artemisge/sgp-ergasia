@@ -15,13 +15,13 @@ typedef struct struct_node {
     node_type nt;
     expr_type et;
     union {
-        int ivalue;         // When nt=T_NUM, et=ET_INT
-        float fvalue;    	// When nt=T_NUM, ET_FLOAT
-        char *svalue;   	// When nt=T_ID
-        pointer_array st;   // When nt=COMP_STMT, symbol table
+        int ivalue;                 // When nt=T_NUM, et=ET_INT
+        float fvalue;    	        // When nt=T_NUM, ET_FLOAT
+        char *svalue;   	        // When nt=T_ID
+        pointer_array st;           // When nt=COMP_STMT, symbol table
     };
-    int num_children;
-    struct struct_node *parent, *children[4];
+    struct struct_node *pn, *pcs;   // Parent node, parent compount statement
+    pointer_array cn;               // child nodes
 } node;
 
 void push_pointer_array(pointer_array *pa, void *p);
