@@ -21,7 +21,7 @@ typedef struct struct_node {
         char *svalue;              // When nt=T_ID
         pointer_array st;          // When nt=COMP_STMT; symbol table
     };
-    int vi;                        // When nt=T_ID, variable index
+    int vi;                        // variable/if/while/for index
     struct struct_node *pn, *pcs;  // Parent node, parent compound statement
     struct struct_node *ps;        // Parent symbol; if NULL, it can't be LVAL
     pointer_array cn;              // child nodes

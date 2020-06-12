@@ -6,7 +6,7 @@
 #include "y.tab.h"
 
 node *root;
-static int vi=0;
+static int vi=0, ii=0, wi=0, fi=0;
 
 // Add all T_ID symbols below n to the current symbol table
 void add_to_symbol_table(node *n, expr_type et) {
@@ -33,11 +33,12 @@ void assemble(node *n) {
         case PROGRAM:
             printf(
                 "* PROGRAM %s\n"
-                "* STACK WITH I1=TOP=LAST PUSHED ITEM\n"
+                "* STACK WITH I1 AS THE TOP POINTER\n"
                 "STACK\tORIG\t*+32\n"
                 "* PRINTER AND ITS OUTPUT BUFFER\n"
                 "LP\tEQU\t18\n"
                 "LPLINE\tORIG\t*+24\n"
+                "* VARIABLES\n"
                 , n->cn.nodes[0]->svalue);
             for (int i = 0; i < vi; i++)
                 printf("V%d\tEQU\t%d\n", i, 2000+i);
@@ -64,6 +65,53 @@ void assemble(node *n) {
             assemble(n->cn.nodes[1]);
             printf("\tSTA\tV%d\n", n->cn.nodes[0]->vi);
             break;
+        case WHILE_STMT:
+            printf("W%dA\tNOP\n", wi);
+            assemble(n->cn.nodes[0]);
+            printf(
+                "\tCMPA\t=1=\n"
+                "\tJNE\tW%dB\n"
+                , wi);
+            assemble(n->cn.nodes[1]);
+            printf("\tJMP\tW%dA\n", wi);
+            printf("W%dB\tNOP\n", wi);
+            wi++;
+            break;
+        case BOOL_EXPR:
+            assemble(n->cn.nodes[0]);
+            printf("\tINC1\t1\n");
+            printf("\tSTA\tSTACK,1\n");
+            assemble(n->cn.nodes[2]);
+            printf("\tCMPA\tSTACK,1\n");
+            // We do the opposite comparison, 2 op 1
+            switch (n->cn.nodes[1]->nt) {
+                case T_EQEQ:
+                    sprintf(buf1, "JE");
+                    break;
+                case '<':
+                    sprintf(buf1, "JG");
+                    break;
+                case '>':
+                    sprintf(buf1, "JL");
+                    break;
+                case T_LEQ:
+                    sprintf(buf1, "JGE");
+                    break;
+                case T_GE:
+                    sprintf(buf1, "JLE");
+                    break;
+                case T_NE:
+                    sprintf(buf1, "JNE");
+                    break;
+            }
+            printf(
+                "\t%s\t1F\n"
+                "\tENTA\t0\n"
+                "\tJMP\t2F\n"
+                "1H\tENTA\t1\n"
+                "2H\tNOP\n"
+                , buf1);
+            break;
         case '+':
             if (!buf1[0])
                 sprintf(buf1, "\tADD\tSTACK,1\n");
@@ -78,7 +126,7 @@ void assemble(node *n) {
         case '/':
             if (!buf1[0])
                 sprintf(buf1, "\tDIV\tSTACK,1\n");
-        case '2': // All expression nodes with 2 childs
+        case '2':  // All expression nodes with 2 childs
             assemble(n->cn.nodes[0]);
             printf("\tINC1\t1\n");
             printf("\tSTA\tSTACK,1\n");
@@ -87,7 +135,7 @@ void assemble(node *n) {
             printf("\tDEC1\t1\n");
             break;
         case T_ID:
-            printf("\tLDA\tV%d *%s\n", n->vi, nt_str(n->pn->nt));
+            printf("\tLDA\tV%d\n", n->vi);
             break;
         case T_NUM:
             if (n->et == ET_INT)
