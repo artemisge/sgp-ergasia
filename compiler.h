@@ -34,6 +34,8 @@ node *create_num_node(char *str);
 node *create_str_node(char *str);
 int debugl(int i, char *s);
 void die(char *msg);
+char *et_str(expr_type et);
+char *nt_str(int nt);
 void *pop_pointer_array(pointer_array *pa);
 void print_tree(node *n, int depth);
 void push_pointer_array(pointer_array *pa, void *p);

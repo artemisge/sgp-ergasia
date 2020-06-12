@@ -50,7 +50,7 @@ void assemble(node *n) {
         case PROGRAM:
             printf(
                 "\tHLT\n"
-	            "\tEND\tMAIN");
+	            "\tEND\tMAIN\n");
             break;
     }
 }
@@ -104,6 +104,40 @@ void die(char *msg) {
     exit(1);
 }
 
+char *et_str(expr_type et)
+{
+    static char *expr_type_strs[]={"none", "int", "float"};
+
+    assert(et >= ET_NONE && et <= ET_FLOAT);
+
+    return expr_type_strs[et];
+}
+
+char *nt_str(int nt)
+{
+    static char *token_type_strs[]={"T_ID", "T_NUM", "T_MAINCLASS",
+        "T_PUBLIC", "T_STATIC", "T_VOID", "T_MAIN", "T_INT", "T_FLOAT",
+        "T_PRINTLN", "T_ELSE", "T_FOR", "T_IF", "T_WHILE", "T_EQEQ",
+        "T_LEQ", "T_NE", "T_GE", "UMINUS"};
+    static char *node_type_strs[]={"PROGRAM", "COMP_STMT", "STMT_LIST",
+    "STMT", "DECLARATION", "TYPE", "ID_LIST", "NULL_STMT", "ASSIGN_STMT",
+    "ASSIGN_EXPR", "EXPR", "FOR_STMT", "OPASSIGN_EXPR", "OPBOOL_EXPR",
+    "WHILE_STMT", "IF_STMT", "ELSE_PART", "BOOL_EXPR", "C_OP", "RVAL",
+    "TERM", "FACTOR"};
+    static char result[10];
+
+    if (nt >= T_ID && nt <= UMINUS)
+        return token_type_strs[nt - T_ID];
+    else if (nt >= PROGRAM && nt <= FACTOR)
+        return node_type_strs[nt - PROGRAM];
+    else if (nt >= 32 && nt < 128)
+        sprintf(result, "%c", nt);
+    else
+        sprintf(result, "%d", nt);
+
+    return result;
+}
+
 void *pop_pointer_array(pointer_array *pa) {
     assert(pa != NULL);
     assert(pa->length > 0);
@@ -115,45 +149,44 @@ void print_tree(node *n, int depth) {
 
     if (n == NULL)
         return;
-    printf("%*s", 2*depth, "");
+    for (i = 0; i < depth; i++)
+        printf("` ");
+    printf("%s(%s): ", nt_str(n->nt), et_str(n->et));
     switch (n->nt) {
         case PROGRAM:
-            printf("mainclass %s\n", n->cn.nodes[0]->svalue);
+            printf("%s\n", n->cn.nodes[0]->svalue);
             break;
         case COMP_STMT:
-            printf("COMPOUND STATEMENT, st=(");
-            for (int i = 0; i < n->st.length; i++) {
-                printf("%d %s, ", n->st.nodes[i]->et, n->st.nodes[i]->svalue);
-            }
+            printf("st=(");
+            if (n->st.length > 0)
+                printf("%s %s", et_str(n->st.nodes[0]->et), n->st.nodes[0]->svalue);
+            for (int i = 1; i < n->st.length; i++)
+                printf(" ,%s %s", et_str(n->st.nodes[i]->et), n->st.nodes[i]->svalue);
             printf(")\n");
             break;
         case '+':
         case '-':
         case '*':
         case '/':
-            printf("%c: %d\n", n->nt, n->et);
+            printf("\n");
             break;
         case UMINUS:
-            printf("UMINUS: %d\n", n->et);
+            printf("\n");
             break;
         case T_ID:
-            printf("T_ID: %s,%d,V%d\n", n->svalue, n->et, n->vi);
+            printf("%s,V%d\n", n->svalue, n->vi);
             break;
         case T_NUM:
             if (n->et == ET_INT)
-                printf("const-int: %d\n", n->ivalue);
+                printf("%d\n", n->ivalue);
             else
-                printf("const-float: %f\n", n->fvalue);
+                printf("%f\n", n->fvalue);
             break;
         default:
-            if (n->nt >= 32 && n->nt < 128)
-                printf("Node %c\n", n->nt);
-            else
-                printf("Node %d\n", n->nt);
+            printf("\n");
     };
-    for (i = 0; i < n->cn.length; i++) {
+    for (i = 0; i < n->cn.length; i++)
         print_tree(n->cn.nodes[i], depth+1);
-    }
 }
 
 void push_pointer_array(pointer_array *pa, void *p) {

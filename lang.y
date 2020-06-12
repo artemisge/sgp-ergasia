@@ -34,7 +34,14 @@ COMP_STMT: '{' STMT_LIST '}'
   { $$ = create_node(COMP_STMT, $2, NULL, NULL, NULL); }
 ;
 
-STMT_LIST: STMT_LIST STMT  { $$ = create_node(STMT_LIST, $1, $2, NULL, NULL); }
+STMT_LIST: STMT_LIST STMT  {
+  if ($1 == NULL)
+      $$ = $2;
+  else if ($2 == NULL)
+      $$ = $1;
+  else
+      $$ = create_node(STMT_LIST, $1, $2, NULL, NULL);
+  }
 |  { $$ = NULL; };
 
 STMT: ASSIGN_STMT  { $$ = $1; }
