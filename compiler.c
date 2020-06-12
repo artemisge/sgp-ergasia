@@ -27,73 +27,73 @@ void add_to_symbol_table(node *n, expr_type et) {
 }
 
 void assemble(node *n) {
-    char buf1[100];
-    int buf1f=0;
+    char buf1[100] = "";
 
     switch (n->nt) {
         case PROGRAM:
             printf(
                 "* PROGRAM %s\n"
-                "BUF1\tCON\t0\n"
-                "BUF2\tCON\t0\n"
-                "BUF3\tCON\t0\n"
-                "TMP\tEQU\t3000\n"
-                "BUF\tEQU\t3001\n"
-                "* EXPRESSION STACK\n"
-                "* I1 IS USED AS ITS \"TOP\" POINTER\n"
-                "ESTACK\tORIG\t*+32\n"
+                "* STACK WITH I1=TOP=LAST PUSHED ITEM\n"
+                "STACK\tORIG\t*+32\n"
+                "* PRINTER AND ITS OUTPUT BUFFER\n"
+                "LP\tEQU\t18\n"
+                "LPLINE\tORIG\t*+24\n"
                 , n->cn.nodes[0]->svalue);
             for (int i = 0; i < vi; i++)
                 printf("V%d\tEQU\t%d\n", i, 2000+i);
             printf(
                 "\tORIG\t100\n"
                 "MAIN\tENT1\t0\n");
-            for (int i = 0; i < n->cn.length; i++)
-                assemble(n->cn.nodes[i]);
+            assemble(n->cn.nodes[1]);
             printf(
                 "\tHLT\n"
 	            "\tEND\tMAIN\n");
+            break;
+        case DECLARATION:
+            break;
+        case T_PRINTLN:
+            assemble(n->cn.nodes[0]);
+            printf(
+                "\tCHAR\n"
+                "\tSTA\tLPLINE\n"
+                "\tSTX\tLPLINE+1\n"
+                "\tOUT\tLPLINE(LP)\n"
+                "\tJBUS\t*(LP)\n");
             break;
         case ASSIGN_EXPR:
             assemble(n->cn.nodes[1]);
             printf("\tSTA\tV%d\n", n->cn.nodes[0]->vi);
             break;
+        case '+':
+            if (!buf1[0])
+                sprintf(buf1, "\tADD\tSTACK,1\n");
+        case '-':
+            if (!buf1[0])
+                sprintf(buf1, "\tSUB\tSTACK,1\n");
+        case '*':
+            if (!buf1[0])
+                sprintf(buf1,
+                    "\tMUL\tSTACK,1\n"
+                    "\tSLC\t5\n");
+        case '/':
+            if (!buf1[0])
+                sprintf(buf1, "\tDIV\tSTACK,1\n");
+        case '2': // All expression nodes with 2 childs
+            assemble(n->cn.nodes[0]);
+            printf("\tINC1\t1\n");
+            printf("\tSTA\tSTACK,1\n");
+            assemble(n->cn.nodes[1]);
+            printf("%s", buf1);
+            printf("\tDEC1\t1\n");
+            break;
         case T_ID:
-            printf("\tLDA\tV%d\n", n->vi);
+            printf("\tLDA\tV%d *%s\n", n->vi, nt_str(n->pn->nt));
             break;
         case T_NUM:
             if (n->et == ET_INT)
                 printf("\tLDA\t=%d=\n", n->ivalue);
             else
                 printf("\tLDA\t=%f=\n", n->fvalue);
-            break;
-        case '+':
-            if (!buf1f) {
-                sprintf(buf1, "\tADD\tESTACK,1\n");
-                buf1f = 1;
-            }
-        case '-':
-            if (!buf1f) {
-                sprintf(buf1, "\tSUB\tESTACK,1\n");
-                buf1f = 1;
-            }
-        case '*':
-            if (!buf1f) {
-                sprintf(buf1, "\tMUL\tESTACK,1\n");
-                buf1f = 1;
-            }
-        case '/':
-            if (!buf1f) {
-                sprintf(buf1, "\tDIV\tESTACK,1\n");
-                buf1f = 1;
-            }
-        case ' ': // All expression nodes with 2 childs
-            assemble(n->cn.nodes[0]);
-            printf("\tINC1\t1\n");
-            printf("\tSTA\tESTACK,1\n");
-            assemble(n->cn.nodes[1]);
-            printf(buf1);
-            printf("\tDEC1\t1\n");
             break;
         default:
             for (int i = 0; i < n->cn.length; i++)
@@ -195,8 +195,9 @@ void print_tree(node *n, int depth) {
 
     if (n == NULL)
         return;
+    printf("* ");
     for (i = 0; i < depth; i++)
-        printf("` ");
+        printf("  ");
     printf("%s(%s): ", nt_str(n->nt), et_str(n->et));
     switch (n->nt) {
         case PROGRAM:
@@ -344,6 +345,9 @@ int main ()
     printf("\n");
     semantic_top_down(root);
     semantic_bottom_up(root);
-    print_tree(root, 0);
     assemble(root);
+    printf("* --------------------\n");
+    printf("* ABSTRACT SYNTAX TREE\n");
+    printf("* --------------------\n");
+    print_tree(root, 0);
 }

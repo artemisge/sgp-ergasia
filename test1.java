@@ -1,4 +1,4 @@
-mainclass FIBONACCI {
+mainclass SimpleExpression {
   public static void main() {
     int sum;
     sum = 4;
