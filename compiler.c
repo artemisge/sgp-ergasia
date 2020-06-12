@@ -27,6 +27,9 @@ void add_to_symbol_table(node *n, expr_type et) {
 }
 
 void assemble(node *n) {
+    char buf1[100];
+    int buf1f=0;
+
     switch (n->nt) {
         case PROGRAM:
             printf(
@@ -35,23 +38,66 @@ void assemble(node *n) {
                 "BUF2\tCON\t0\n"
                 "BUF3\tCON\t0\n"
                 "TMP\tEQU\t3000\n"
-                "BUF\tEQU\t3001\n", n->cn.nodes[0]->svalue);
+                "BUF\tEQU\t3001\n"
+                "* EXPRESSION STACK\n"
+                "* I1 IS USED AS ITS \"TOP\" POINTER\n"
+                "ESTACK\tORIG\t*+32\n"
+                , n->cn.nodes[0]->svalue);
             for (int i = 0; i < vi; i++)
                 printf("V%d\tEQU\t%d\n", i, 2000+i);
             printf(
                 "\tORIG\t100\n"
-                "MAIN\tNOP\n");
-            break;
-    }
-    for (int i = 0; i < n->cn.length; i++) {
-        assemble(n->cn.nodes[i]);
-    }
-    switch (n->nt) {
-        case PROGRAM:
+                "MAIN\tENT1\t0\n");
+            for (int i = 0; i < n->cn.length; i++)
+                assemble(n->cn.nodes[i]);
             printf(
                 "\tHLT\n"
 	            "\tEND\tMAIN\n");
             break;
+        case ASSIGN_EXPR:
+            assemble(n->cn.nodes[1]);
+            printf("\tSTA\tV%d\n", n->cn.nodes[0]->vi);
+            break;
+        case T_ID:
+            printf("\tLDA\tV%d\n", n->vi);
+            break;
+        case T_NUM:
+            if (n->et == ET_INT)
+                printf("\tLDA\t=%d=\n", n->ivalue);
+            else
+                printf("\tLDA\t=%f=\n", n->fvalue);
+            break;
+        case '+':
+            if (!buf1f) {
+                sprintf(buf1, "\tADD\tESTACK,1\n");
+                buf1f = 1;
+            }
+        case '-':
+            if (!buf1f) {
+                sprintf(buf1, "\tSUB\tESTACK,1\n");
+                buf1f = 1;
+            }
+        case '*':
+            if (!buf1f) {
+                sprintf(buf1, "\tMUL\tESTACK,1\n");
+                buf1f = 1;
+            }
+        case '/':
+            if (!buf1f) {
+                sprintf(buf1, "\tDIV\tESTACK,1\n");
+                buf1f = 1;
+            }
+        case ' ': // All expression nodes with 2 childs
+            assemble(n->cn.nodes[0]);
+            printf("\tINC1\t1\n");
+            printf("\tSTA\tESTACK,1\n");
+            assemble(n->cn.nodes[1]);
+            printf(buf1);
+            printf("\tDEC1\t1\n");
+            break;
+        default:
+            for (int i = 0; i < n->cn.length; i++)
+                assemble(n->cn.nodes[i]);
     }
 }
 

@@ -1,0 +1,40 @@
+mainclass Fibonacci {
+  public static void main() {
+    int first, second, i, tmp;
+    first = 0;
+    second = 1;
+    i = 0;
+    while (i < 10) {
+      i = i + 1;
+      tmp = first + second;
+      println(tmp);
+      first = second;
+      second = tmp;
+    }
+  }
+}
+
+
+
+NUMA	CON	1
+NUMB	CON	2
+NUMC	CON	3
+NUMD	CON	4
+
+	ORIG	3000
+MAIN	NOP
+	LDA	NUMA
+	ADD	NUMB
+	STA	SUM
+	LDA	NUMC
+	ADD	NUMD
+	MUL	SUM
+	STX	SUM
+	LDA	SUM	
+	CHAR
+	STA	LPLINE
+	STX	LPLINE+1
+	OUT	LPLINE(LP)
+	JBUS	*(LP)
+	HLT
+	END	MAIN
