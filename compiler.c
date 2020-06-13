@@ -94,7 +94,7 @@ void assemble(node *n) {
             break;
         case T_PRINTLN:
             assemble(n->cn.nodes[0]);
-            if (n->cn.nodes[0]->et = ET_INT)
+            if (n->cn.nodes[0]->et == ET_INT)
                 printf("\tJMP\tPRINTI\n");
             else
                 printf("\tJMP\tPRINTF\n");
@@ -114,6 +114,19 @@ void assemble(node *n) {
             printf("\tJMP\tW%dA\n", wi);
             printf("W%dB\tNOP\n", wi);
             wi++;
+            break;
+        case IF_STMT:
+            assemble(n->cn.nodes[0]);  // BOOL_EXPR
+            printf(
+                "\tCMPA\t=1=\n"
+                "\tJNE\tI%dA\n"  // jump to ELSE_PART if BOOL_EXPR is false
+                , ii);
+            assemble(n->cn.nodes[1]);  // STMT
+            printf("\tJMP\tI%dB\n", ii);  // jump to if-end cause 'else' won't be executed
+            printf("I%dA\tNOP\n", ii);  // LABEL for ELSE_PART
+            assemble(n->cn.nodes[2]);  // ELSE_PART
+            printf("I%dB\tNOP\n", ii);  // LABEL for if-end
+            ii++;
             break;
         case BOOL_EXPR:
             assemble(n->cn.nodes[0]);
