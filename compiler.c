@@ -33,33 +33,71 @@ void assemble(node *n) {
         case PROGRAM:
             printf(
                 "* PROGRAM %s\n"
+                "* TOLERANCE OF FCMP\n"
+                "EPSILON\tCON\t0\n"
                 "* STACK WITH I1 AS THE TOP POINTER\n"
                 "STACK\tORIG\t*+32\n"
                 "* PRINTER AND ITS OUTPUT BUFFER\n"
                 "LP\tEQU\t18\n"
                 "LPLINE\tORIG\t*+24\n"
+                "* A TEMPORARY WORD\n"
+                "TMP\tCON\t0\n"
+                "* CONSTANTS\n"
+                "FLTP\tALF\tFLT +\n"
+                "FLTN\tALF\tFLT -\n"
+                "INTP\tALF\tINT +\n"
+                "INTN\tALF\tINT -\n"
                 "* VARIABLES\n"
                 , n->cn.nodes[0]->svalue);
             for (int i = 0; i < vi; i++)
                 printf("V%d\tEQU\t%d\n", i, 2000+i);
             printf(
                 "\tORIG\t100\n"
-                "MAIN\tENT1\t0\n");
+                "MAIN\tENT1\t0\n"
+                );
             assemble(n->cn.nodes[1]);
             printf(
                 "\tHLT\n"
-	            "\tEND\tMAIN\n");
+                "* STANDARD LIBRARY, I2 HOLDS THE RETURN ADDRESS\n"
+                "* VOID PRINTI(INT LDA)\n"
+                "PRINTI\tSTJ\tTMP\n"
+                "\tLD2\tTMP(1:2)\n"
+                "\tLDX\tINTP\n"
+                "\tJAP\t1F\n"
+                "\tLDX\tINTN\n"
+                "1H\tSTX\tLPLINE\n"
+                "\tCHAR\n"
+                "\tSTA\tLPLINE+1\n"
+                "\tSTX\tLPLINE+2\n"
+                "\tOUT\tLPLINE(LP)\n"
+                "\tJBUS\t*(LP)\n"
+                "\tJSJ\t0,2\n"
+                "* VOID PRINTF(FLOAT LDA)\n"
+                "PRINTF\tSTJ\tTMP\n"
+                "\tLD2\tTMP(1:2)\n"
+                "\tLDX\tFLTP\n"
+                "\tJAP\t1F\n"
+                "\tLDX\tFLTN\n"
+                "1H\tSTX\tLPLINE\n"
+                "\tSTA\tTMP\n"
+                "\tFIX\n"
+                "\tCHAR\n"
+                "\tSTA\tLPLINE+1\n"
+                "\tSTX\tLPLINE+2\n"
+                "\tOUT\tLPLINE(LP)\n"
+                "\tJBUS\t*(LP)\n"
+                "\tJSJ\t0,2\n"
+                "\tEND\tMAIN\n"
+                );
             break;
         case DECLARATION:
             break;
         case T_PRINTLN:
             assemble(n->cn.nodes[0]);
-            printf(
-                "\tCHAR\n"
-                "\tSTA\tLPLINE\n"
-                "\tSTX\tLPLINE+1\n"
-                "\tOUT\tLPLINE(LP)\n"
-                "\tJBUS\t*(LP)\n");
+            if (n->cn.nodes[0]->et = ET_INT)
+                printf("\tJMP\tPRINTI\n");
+            else
+                printf("\tJMP\tPRINTF\n");
             break;
         case ASSIGN_EXPR:
             assemble(n->cn.nodes[1]);
@@ -125,7 +163,9 @@ void assemble(node *n) {
                     "\tSLC\t5\n");
         case '/':
             if (!buf1[0])
-                sprintf(buf1, "\tDIV\tSTACK,1\n");
+                sprintf(buf1,
+                    "\tSLC\t5\n"
+                    "\tDIV\tSTACK,1\n");
         case '2':  // All expression nodes with 2 childs
             assemble(n->cn.nodes[0]);
             printf("\tINC1\t1\n");
@@ -241,6 +281,12 @@ void *pop_pointer_array(pointer_array *pa) {
 void print_tree(node *n, int depth) {
     int i;
 
+    if (depth == 0)
+        printf(
+            "* --------------------\n"
+            "* ABSTRACT SYNTAX TREE\n"
+            "* --------------------\n"
+            );
     if (n == NULL)
         return;
     printf("* ");
@@ -390,12 +436,8 @@ int yywrap(void) {
 int main ()
 {
     yyparse();
-    printf("\n");
     semantic_top_down(root);
     semantic_bottom_up(root);
     assemble(root);
-    printf("* --------------------\n");
-    printf("* ABSTRACT SYNTAX TREE\n");
-    printf("* --------------------\n");
     print_tree(root, 0);
 }
