@@ -33,26 +33,21 @@ void assemble(node *n) {
         case PROGRAM:
             printf(
                 "* PROGRAM %s\n"
-                "* TOLERANCE OF FCMP\n"
-                "EPSILON\tCON\t0\n"
-                "* STACK WITH I1 AS THE TOP POINTER\n"
-                "STACK\tORIG\t*+32\n"
-                "* PRINTER AND ITS OUTPUT BUFFER\n"
-                "LP\tEQU\t18\n"
-                "LPLINE\tORIG\t*+24\n"
-                "* A TEMPORARY WORD\n"
-                "TMP\tCON\t0\n"
-                "* CONSTANTS\n"
+                "* VARIABLES\n"
+                "EPSILON\tCON\t0\tTOLERANCE OF FCMP\n"
+                , n->cn.nodes[0]->svalue);
+            for (int i = 0; i < vi; i++)
+                printf("V%d\tCON\t0\n", i);
+            printf(
+                "TMP\tCON\t0\tTEMPORARY WORD\n"
+                "LP\tEQU\t18\tLINE PRINTER\n"
+                "LPLINE\tORIG\t*+24\tITS OUTPUT BUFFER\n"
+                "STACK\tORIG\t*+32\tSTACK, I1=TOP\n"
+                "* STRINGS\n"
                 "FLTP\tALF\tFLT +\n"
                 "FLTN\tALF\tFLT -\n"
                 "INTP\tALF\tINT +\n"
                 "INTN\tALF\tINT -\n"
-                "* VARIABLES\n"
-                , n->cn.nodes[0]->svalue);
-            for (int i = 0; i < vi; i++)
-                printf("V%d\tEQU\t%d\n", i, 2000+i);
-            printf(
-                "\tORIG\t100\n"
                 "MAIN\tENT1\t0\n"
                 );
             assemble(n->cn.nodes[1]);
@@ -62,7 +57,7 @@ void assemble(node *n) {
                 "* VOID PRINTI(INT LDA)\n"
                 "PRINTI\tSTJ\tTMP\n"
                 "\tLD2\tTMP(1:2)\n"
-                "\tLDX\tINTP\n"
+                "\tLDX\tINTP\tSHOW TYPE AND SIGN\n"
                 "\tJAP\t1F\n"
                 "\tLDX\tINTN\n"
                 "1H\tSTX\tLPLINE\n"
@@ -75,7 +70,7 @@ void assemble(node *n) {
                 "* VOID PRINTF(FLOAT LDA)\n"
                 "PRINTF\tSTJ\tTMP\n"
                 "\tLD2\tTMP(1:2)\n"
-                "\tLDX\tFLTP\n"
+                "\tLDX\tFLTP\tSHOW TYPE AND SIGN\n"
                 "\tJAP\t1F\n"
                 "\tLDX\tFLTN\n"
                 "1H\tSTX\tLPLINE\n"
