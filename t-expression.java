@@ -1,8 +1,15 @@
 mainclass SimpleExpression {
   public static void main() {
-    int sum;
-    sum = 4;
-    sum = (1+2)*(3+sum*(5+6));
-    println(sum);
+    float f;
+    f = 5.6;
+    println(f);
+    f = -123.456;
+    println(f);
+    f = 0;
+    println(f);
+    f = 1.2*3;
+    println(f);
+    f = 8/3;
+    println(f);
   }
 }

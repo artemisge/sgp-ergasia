@@ -26,7 +26,7 @@ As proposed in [TAOCP->MIXware](https://www-cs-faculty.stanford.edu/~knuth/taocp
 * [Ruslan Batdalov's MIX emulator, in Scala, which allows execution both forwards and backwards](http://www.mix-emulator.org/): Web based, no floating point support.
 
 
-* [http://home.telkomsa.net/dlaing/mix.html]: No floating point suppoort.
+* [http://home.telkomsa.net/dlaing/mix.html]: No floating point support.
 
 # Documentation links
 
@@ -34,3 +34,12 @@ As proposed in [TAOCP->MIXware](https://www-cs-faculty.stanford.edu/~knuth/taocp
 * https://en.wikipedia.org/wiki/MIX
 * https://esolangs.org/wiki/MIX_(Knuth): floats, character set etc
 
+# TODO
+
+* Auto-upgrade integers to floats when needed
+* Fix +, -, *, /
+* Implement UMINUS
+* Implement FOR_STMT
+* Add documentation
+* Show decimal part in println(float)
+* Replace =LITERALS= with CONstants and comments, for readability

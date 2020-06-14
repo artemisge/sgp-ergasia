@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,6 +28,7 @@ void add_to_symbol_table(node *n, expr_type et) {
 }
 
 void assemble(node *n) {
+    int i;
     char buf1[100] = "";
 
     switch (n->nt) {
@@ -36,7 +38,7 @@ void assemble(node *n) {
                 "* VARIABLES\n"
                 "EPSILON\tCON\t0\tTOLERANCE OF FCMP\n"
                 , n->cn.nodes[0]->svalue);
-            for (int i = 0; i < vi; i++)
+            for (i = 0; i < vi; i++)
                 printf("V%d\tCON\t0\n", i);
             printf(
                 "TMP\tCON\t0\tTEMPORARY WORD\n"
@@ -186,13 +188,18 @@ void assemble(node *n) {
             printf("\tLDA\tV%d\n", n->vi);
             break;
         case T_NUM:
-            if (n->et == ET_INT)
-                printf("\tLDA\t=%d=\n", n->ivalue);
+            if (n->et == ET_FLOAT) {
+                i = float_as_int(n->fvalue);
+                printf("* Float constant: %f\n", n->fvalue);
+            }
             else
-                printf("\tLDA\t=%f=\n", n->fvalue);
-            break;
+                i = n->ivalue;
+            if (i >= 0)
+                printf("\tLDA\t=%d=\n", i);
+            else
+                printf("\tLDAN\t=%d=\n", -i);
         default:
-            for (int i = 0; i < n->cn.length; i++)
+            for (i = 0; i < n->cn.length; i++)
                 assemble(n->cn.nodes[i]);
     }
 }
@@ -253,6 +260,38 @@ char *et_str(expr_type et)
     assert(et >= ET_NONE && et <= ET_FLOAT);
 
     return expr_type_strs[et];
+}
+
+// Return an integer with the same binary representation in MIX as f.
+// This is because no MIX tools allow floats in CONstants or =LITERALS=.
+int float_as_int(float f) {
+    int sign, exponent;
+    float logbase64, fraction;
+
+    if (f == 0)
+        return 0;
+    else if (f > 0)
+        sign = 1;
+    else {
+        sign = -1;
+        f = -f;
+    }
+    logbase64 = log10(f) / log10(64);
+    // Is it an integer power?
+    if (floor(logbase64) == ceil(logbase64))
+        exponent = ceil(logbase64 + 1);
+    else
+        exponent = ceil(logbase64);
+    fraction = f / pow(64, exponent);
+    // Add EXPBIAS and check the value
+    exponent = exponent + 32;
+    if (exponent < 0 || exponent >= 64)
+        die("Exponent out of bounds");
+    if (fraction < 1.0/64.0 || fraction >= 1)
+        die("Fraction out of bounds");
+
+    // 16777216 = 64^3 = FRACBIAS
+    return sign*16777216*exponent + round(16777216*fraction);
 }
 
 char *nt_str(int nt)
