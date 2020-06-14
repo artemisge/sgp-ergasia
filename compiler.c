@@ -35,13 +35,12 @@ void assemble(node *n) {
         case PROGRAM:
             printf(
                 "* PROGRAM %s\n"
-                "* VARIABLES\n"
                 "EPSILON\tCON\t0\tTOLERANCE OF FCMP\n"
+                "* VARIABLES\n"
                 , n->cn.nodes[0]->svalue);
             for (i = 0; i < vi; i++)
                 printf("V%d\tCON\t0\n", i);
             printf(
-                "TMP\tCON\t0\tTEMPORARY WORD\n"
                 "LP\tEQU\t18\tLINE PRINTER\n"
                 "LPLINE\tORIG\t*+24\tITS OUTPUT BUFFER\n"
                 "STACK\tORIG\t*+32\tSTACK, I1=TOP\n"
@@ -50,40 +49,73 @@ void assemble(node *n) {
                 "FLTN\tALF\tFLT -\n"
                 "INTP\tALF\tINT +\n"
                 "INTN\tALF\tINT -\n"
-                "MAIN\tENT1\t0\n"
+                "* DEFINES\n"
+                "* ALWAYS USE SVx,1 NEVER SVx:\n"
+                "SV1\tEQU\tSTACK+1\tSTACK VARIABLE 1\n"
+                "SV2\tEQU\tSTACK+2\tSTACK VARIABLE 2\n"
+                "SV3\tEQU\tSTACK+3\tSTACK VARIABLE 3\n"
+                "SV4\tEQU\tSTACK+4\tSTACK VARIABLE 4\n"
+                "MAIN\tENT1\t0\tSTACK POINTER=0\n"
                 );
             assemble(n->cn.nodes[1]);
             printf(
                 "\tHLT\n"
-                "* STANDARD LIBRARY, I2 HOLDS THE RETURN ADDRESS\n"
-                "* VOID PRINTI(INT LDA)\n"
-                "PRINTI\tSTJ\tTMP\n"
-                "\tLD2\tTMP(1:2)\n"
+                "* STANDARD LIBRARY\n"
+                "* J AND I6 ARE USED FOR CALL/RETURN\n"
+                "* VOID PRINTI(INT A)\n"
+                "PRINTI\tSTJ\tSV1,1\n"
                 "\tLDX\tINTP\tSHOW TYPE AND SIGN\n"
-                "\tJAP\t1F\n"
+                "\tJANN\t1F\n"
                 "\tLDX\tINTN\n"
                 "1H\tSTX\tLPLINE\n"
                 "\tCHAR\n"
                 "\tSTA\tLPLINE+1\n"
                 "\tSTX\tLPLINE+2\n"
+                "\tSTZ\tLPLINE+3\n"
                 "\tOUT\tLPLINE(LP)\n"
                 "\tJBUS\t*(LP)\n"
-                "\tJSJ\t0,2\n"
-                "* VOID PRINTF(FLOAT LDA)\n"
-                "PRINTF\tSTJ\tTMP\n"
-                "\tLD2\tTMP(1:2)\n"
+                "\tLD6\tSV1,1(1:2)\n"
+                "\tJSJ\t0,6\n"
+                "* VOID PRINTF(FLOAT A)\n"
+                "PRINTF\tSTJ\tSV1,1\n"
                 "\tLDX\tFLTP\tSHOW TYPE AND SIGN\n"
-                "\tJAP\t1F\n"
+                "\tJANN\t1F\n"
                 "\tLDX\tFLTN\n"
                 "1H\tSTX\tLPLINE\n"
-                "\tSTA\tTMP\n"
+                "\tSTA\tSV2,1(1:5)\tOMIT SIGN\n"
+                "\tLDA\tSV2,1\tA=ABS(A)\n"
                 "\tFIX\n"
+                "\tSTA\tSV3,1\tSV3=ROUND(A)\n"
+                "\tLDX\tSV3,1\tX=SV3\n"
+                "\tFLOT\n"
+                "\tFSUB\tSV2,1\tA=SV3-SV2\n"
+                "\tJAN\t1F\tNO JUMP IF ROUND(A)>A\n"
+                "\tDECX\t1\n"
+                "\tSTX\tSV3,1\tSV3=SV3-1\n"
+                "1H\tLDA\tSV3,1\n"
                 "\tCHAR\n"
                 "\tSTA\tLPLINE+1\n"
                 "\tSTX\tLPLINE+2\n"
+                "* NOW FOR THE FRACTIONAL PART\n"
+                "\tLDAN\tSV3,1\n"
+                "\tFLOT\n"
+                "\tFADD\tSV2,1\tNOW A=FRACTION\n"
+                "\tSTA\tSV2,1\n"
+                "\tLDA\t=10000=\n"
+                "\tFLOT\n"
+                "\tFMUL\tSV2,1\n"
+                "\tFIX\n"
+                "\tCMPA\t=9999=\n"
+                "\tJLE\t1F\n"
+                "\tLDA\t=9999=\n"
+                "1H\tCHAR\n"
+                "\tSTX\tLPLINE+3\n"
+                "\tLDA\t=40=\n"
+                "\tSTA\tLPLINE+3(1:1)\n"
                 "\tOUT\tLPLINE(LP)\n"
                 "\tJBUS\t*(LP)\n"
-                "\tJSJ\t0,2\n"
+                "\tLD6\tSV1,1(1:2)\n"
+                "\tJSJ\t0,6\n"
                 "\tEND\tMAIN\n"
                 );
             break;
@@ -190,7 +222,7 @@ void assemble(node *n) {
         case T_NUM:
             if (n->et == ET_FLOAT) {
                 i = float_as_int(n->fvalue);
-                printf("* Float constant: %f\n", n->fvalue);
+                printf("* Float literal: %f\n", n->fvalue);
             }
             else
                 i = n->ivalue;
