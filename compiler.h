@@ -33,7 +33,7 @@ node *create_node(node_type nt, node *c0, node *c1, node *c2, node *c3);
 node *create_num_node(char *str);
 node *create_str_node(char *str);
 int debugl(int i, char *s);
-void die(char *msg);
+void die(char *format, ...);
 char *et_str(expr_type et);
 int float_as_int(float f);
 char *nt_str(int nt);

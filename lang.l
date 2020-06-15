@@ -93,7 +93,7 @@ num (0|[1-9][0-9]*)(\.[0-9]*)?
 {ws} {
 }
 . {
-    printf("invalid input: %s\n", yytext);
+    die("Invalid input: %s\n", yytext);
 }
 
 %%

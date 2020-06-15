@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <math.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,9 +13,8 @@ static int vi=0, ii=0, wi=0, fi=0;
 // Add all T_ID symbols below n to the current symbol table
 void add_to_symbol_table(node *n, expr_type et) {
     if (n->nt == T_ID) {
-        if (search_symbol(n, n->svalue, 1) != NULL) {
-            die("This variable has been declared before! IDIOT!");
-        }
+        if (search_symbol(n, n->svalue, 1) != NULL)
+            die("Variable %s has been declared before! IDIOT!", n->svalue);
         n->et = et;
         push_pointer_array(&n->pcs->st, n);
         // Number variables for assembly generation
@@ -277,11 +277,18 @@ node *create_str_node(char *str) {
 }
 
 int debugl(int i, char *s) {
-    //printf("[%d,%s]", i, s);
+    // fprintf(stderr, "[%d,%s]", i, s);
 }
 
-void die(char *msg) {
-    fprintf(stderr, "%s\n", msg);
+void die(char *format, ...) {
+    va_list args;
+    char buf[1000];
+
+    va_start(args, format);
+    sprintf(buf, "%s\n", format);
+    vfprintf(stderr, buf, args);
+    va_end(args);
+
     exit(1);
 }
 
@@ -318,9 +325,9 @@ int float_as_int(float f) {
     // Add EXPBIAS and check the value
     exponent = exponent + 32;
     if (exponent < 0 || exponent >= 64)
-        die("Exponent out of bounds");
+        die("Exponent out of bounds: %d", exponent);
     if (fraction < 1.0/64.0 || fraction >= 1)
-        die("Fraction out of bounds");
+        die("Fraction out of bounds: %f", fraction);
 
     // 16777216 = 64^3 = FRACBIAS
     return sign*16777216*exponent + round(16777216*fraction);
@@ -446,7 +453,7 @@ void semantic_bottom_up(node *n) {
     switch (n->nt) {
         case ASSIGN_EXPR:
             if (n->cn.nodes[0]->et == ET_INT && n->cn.nodes[1]->et == ET_FLOAT)
-                die("Can't assign float to int! UwU");
+                die("Can't assign float to int %s! UwU", n->cn.nodes[0]->svalue);
             n->et = n->cn.nodes[0]->et;
             break;
         case '+':
@@ -504,8 +511,7 @@ void semantic_top_down(node *n) {
 
 void yyerror(const char *msg)
 {
-    fprintf(stderr, "McChris language error: %s\n", msg);
-    exit(1);
+    die("McChris language error: %s\n", msg);
 }
 
 int yywrap(void) {
