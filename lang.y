@@ -87,19 +87,19 @@ ELSE_PART: T_ELSE STMT  { $$ = $2; }
 
 BOOL_EXPR: EXPR C_OP EXPR { $$ = create_node(BOOL_EXPR, $1, $2, $3, NULL); };
 
-C_OP: T_EQEQ  { $$ = create_node($1, NULL, NULL, NULL, NULL); }
-| '<'  { $$ = create_node($1, NULL, NULL, NULL, NULL); }
-| '>'  { $$ = create_node($1, NULL, NULL, NULL, NULL); }
-| T_LEQ  { $$ = create_node($1, NULL, NULL, NULL, NULL); }
-| T_GE  { $$ = create_node($1, NULL, NULL, NULL, NULL); }
-| T_NE  { $$ = create_node($1, NULL, NULL, NULL, NULL); };
+C_OP: T_EQEQ  { $$ = create_node(T_EQEQ, NULL, NULL, NULL, NULL); }
+| '<'  { $$ = create_node('<', NULL, NULL, NULL, NULL); }
+| '>'  { $$ = create_node('>', NULL, NULL, NULL, NULL); }
+| T_LEQ  { $$ = create_node(T_LEQ, NULL, NULL, NULL, NULL); }
+| T_GE  { $$ = create_node(T_GE, NULL, NULL, NULL, NULL); }
+| T_NE  { $$ = create_node(T_NE, NULL, NULL, NULL, NULL); };
 
-RVAL: RVAL '+' TERM { $$ = create_node($2, $1, $3, NULL, NULL); }
-| RVAL '-' TERM { $$ = create_node($2, $1, $3, NULL, NULL); }
+RVAL: RVAL '+' TERM { $$ = create_node('+', $1, $3, NULL, NULL); }
+| RVAL '-' TERM { $$ = create_node('-', $1, $3, NULL, NULL); }
 | TERM  { $$ = $1; };
 
-TERM: TERM '*' FACTOR { $$ = create_node($2, $1, $3, NULL, NULL); }
-| TERM '/' FACTOR { $$ = create_node($2, $1, $3, NULL, NULL); }
+TERM: TERM '*' FACTOR { $$ = create_node('*', $1, $3, NULL, NULL); }
+| TERM '/' FACTOR { $$ = create_node('/', $1, $3, NULL, NULL); }
 | FACTOR  { $$ = $1; };
 
 FACTOR: '(' EXPR ')'  { $$ = $2; }

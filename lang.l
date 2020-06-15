@@ -61,7 +61,6 @@ num (0|[1-9][0-9]*)(\.[0-9]*)?
 }
 [+-/*(){}=><;,] {
     debugl(yytext[0], yytext);
-    yylval.INT=yytext[0];
     return(yytext[0]);
 }
 "==" {

@@ -31,6 +31,7 @@ void assemble(node *n) {
     int i;
     char buf1[100] = "";
 
+    assert(n != NULL);
     switch (n->nt) {
         case PROGRAM:
             printf(
@@ -157,12 +158,36 @@ void assemble(node *n) {
             printf("I%dB\tNOP\n", ii);  // LABEL for if-end
             ii++;
             break;
+        case FOR_STMT:
+        //if there are no optional declaration/bool/update expressions it will be an endless-loop
+            if (n->cn.nodes[0] != NULL)
+                assemble(n->cn.nodes[0]); //optional declaration
+            printf("F%dA\tNOP\n", fi); //LABEL to return to
+            if (n->cn.nodes[1] != NULL) {
+                assemble(n->cn.nodes[1]); //optional bool expr
+                printf(
+                    "\tCMPA\t=1=\n"
+                    "\tJNE\tF%dB\n" //end-loop
+                    , fi);
+            }
+            assemble(n->cn.nodes[3]); // statement
+            if (n->cn.nodes[2] != NULL) {
+                assemble(n->cn.nodes[2]); //optional loop-update expr
+            }
+            printf("\tJMP\tF%dA\n", fi); //go back to bool expr
+            printf("F%dB\tNOP\n", fi); //end-loop LABEL
+            fi++;
+            break;
         case BOOL_EXPR:
             assemble(n->cn.nodes[0]);
             printf("\tINC1\t1\n");
             printf("\tSTA\tSTACK,1\n");
             assemble(n->cn.nodes[2]);
-            printf("\tCMPA\tSTACK,1\n");
+            // TODO: support floats here
+            printf(
+                "\tDEC1\t1\n"
+                "\tCMPA\tSTACK+1,1\n"
+                );
             // We do the opposite comparison, 2 op 1
             switch (n->cn.nodes[1]->nt) {
                 case T_EQEQ:
@@ -183,6 +208,8 @@ void assemble(node *n) {
                 case T_NE:
                     sprintf(buf1, "JNE");
                     break;
+                default:
+                    die("Unknown boolean operator %d", n->cn.nodes[1]->nt);
             }
             printf(
                 "\t%s\t1F\n"
@@ -194,13 +221,25 @@ void assemble(node *n) {
             break;
         case '+':
             if (!buf1[0])
-                sprintf(buf1, "\tADD\tSTACK,1\n");
+                if (n->cn.nodes[0]->et == ET_FLOAT || n->cn.nodes[1]->et == ET_FLOAT)
+                    sprintf(buf1, "\tFADD\tSTACK,1\n");
+                else
+                    sprintf(buf1, "\tADD\tSTACK,1\n");
         case '-':
-            if (!buf1[0])
-                sprintf(buf1, "\tSUB\tSTACK,1\n");
+            if (!buf1[0]) {
+                if (n->cn.nodes[0]->et == ET_FLOAT || n->cn.nodes[1]->et == ET_FLOAT)
+                    sprintf(buf1, "\tFSUB\tSTACK,1\n");
+                else
+                    sprintf(buf1, "\tSUB\tSTACK,1\n");
+            }
         case '*':
             if (!buf1[0])
-                sprintf(buf1,
+                if (n->cn.nodes[0]->et == ET_FLOAT || n->cn.nodes[1]->et == ET_FLOAT)
+                    sprintf(buf1,
+                    "\tFMUL\tSTACK,1\n"
+                    "\tSLC\t5\n");
+                else
+                    sprintf(buf1,
                     "\tMUL\tSTACK,1\n"
                     "\tSLC\t5\n");
         case '/':
@@ -210,11 +249,26 @@ void assemble(node *n) {
                     "\tDIV\tSTACK,1\n");
         case '2':  // All expression nodes with 2 childs
             assemble(n->cn.nodes[0]);
+            if (n->cn.nodes[0]->et == ET_INT && n->cn.nodes[1]->et == ET_FLOAT)
+                // CONVERT IT TO FLOAT
+                printf("\tFLOT\n");
             printf("\tINC1\t1\n");
             printf("\tSTA\tSTACK,1\n");
             assemble(n->cn.nodes[1]);
             printf("%s", buf1);
             printf("\tDEC1\t1\n");
+            break;
+        case UMINUS:
+            // printf("A=-A"), des PRINTI gia xeirismo proshmou
+            //-(x+2) == node nt==uminus me paidi[0]==x+2
+            assemble(n->cn.nodes[0]); //return result in rA
+            printf("\tINC1\t1\n");
+            printf("\tSTA\tSTACK,1\n");
+            printf("\tLDAN\tSTACK,1\n");
+            printf("\tDEC1\t1\n");
+            printf("\tINC1\t1\n");
+            printf("\tSTA\tSTACK,1\n");
+            printf("\tJMP\tPRINTI\n");
             break;
         case T_ID:
             printf("\tLDA\tV%d\n", n->vi);
