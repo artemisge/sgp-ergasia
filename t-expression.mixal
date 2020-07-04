@@ -1,0 +1,306 @@
+* PROGRAM Expression
+EPSILON	CON	0	TOLERANCE OF FCMP
+* VARIABLES
+LP	EQU	18	LINE PRINTER
+LPLINE	ORIG	*+24	ITS OUTPUT BUFFER
+STACK	ORIG	*+32	STACK, I1=TOP
+* STRINGS
+FLTP	ALF	FLT +
+FLTN	ALF	FLT -
+INTP	ALF	INT +
+INTN	ALF	INT -
+OVFL	ALF	*OVER
+	ALF	FLOW*
+* DEFINES
+* ALWAYS USE SVx,1 NEVER SVx:
+SV1	EQU	STACK+1	STACK VARIABLE 1
+SV2	EQU	STACK+2	STACK VARIABLE 2
+SV3	EQU	STACK+3	STACK VARIABLE 3
+SV4	EQU	STACK+4	STACK VARIABLE 4
+MAIN	ENT1	0	STACK POINTER=0
+	LDA	=1=
+	JMP	PRINTI
+	LDA	=4=
+	STA	SV1,1
+	LDAN	SV1,1
+	JMP	PRINTI
+	LDA	=3=
+	INC1	1
+	STA	STACK,1
+	LDA	=1=
+	STA	SV1,1
+	LDAN	SV1,1
+	STA	SV1,1
+	LDAN	SV1,1
+	MUL	STACK,1
+	SLC	5
+	JOV	OVERFLOW
+	DEC1	1
+	JMP	PRINTI
+	LDA	=3=
+	INC1	1
+	STA	STACK,1
+	LDA	=2=
+	INC1	1
+	STA	STACK,1
+	LDA	=0=
+	SUB	STACK,1
+	JOV	OVERFLOW
+	DEC1	1
+	MUL	STACK,1
+	SLC	5
+	JOV	OVERFLOW
+	DEC1	1
+	JMP	PRINTI
+* Float literal: 0.999999
+	LDA	=553648111=
+	INC1	1
+	STA	STACK,1
+* Float literal: 0.000000
+	LDA	=0=
+	FSUB	STACK,1
+	JOV	OVERFLOW
+	DEC1	1
+	JMP	PRINTF
+* Float literal: 5.600000
+	LDA	=555116134=
+	JMP	PRINTF
+* Float literal: 123.456001
+	LDA	=570931020=
+	INC1	1
+	STA	STACK,1
+	LDA	=0=
+	FLOT
+	FSUB	STACK,1
+	JOV	OVERFLOW
+	DEC1	1
+	JMP	PRINTF
+* Float literal: 123.456001
+	LDA	=570931020=
+	STA	SV1,1
+	LDAN	SV1,1
+	JMP	PRINTF
+* Float literal: 3.000000
+	LDA	=554434560=
+	INC1	1
+	STA	STACK,1
+* Float literal: 1.200000
+	LDA	=553962701=
+	FMUL	STACK,1
+	JOV	OVERFLOW
+	DEC1	1
+	JMP	PRINTF
+	LDA	=3=
+	FLOT
+	INC1	1
+	STA	STACK,1
+* Float literal: 1.200000
+	LDA	=553962701=
+	FMUL	STACK,1
+	JOV	OVERFLOW
+	DEC1	1
+	JMP	PRINTF
+	LDA	=3=
+	STA	SV1,1
+	LDAN	SV1,1
+	FLOT
+	INC1	1
+	STA	STACK,1
+* Float literal: 8.000000
+	LDA	=555745280=
+	FDIV	STACK,1
+	JOV	OVERFLOW
+	DEC1	1
+	JMP	PRINTF
+* Float literal: 3.000000
+	LDA	=554434560=
+	INC1	1
+	STA	STACK,1
+	LDA	=8=
+	STA	SV1,1
+	LDAN	SV1,1
+	FLOT
+	FDIV	STACK,1
+	JOV	OVERFLOW
+	DEC1	1
+	JMP	PRINTF
+	LDA	=3=
+	INC1	1
+	STA	STACK,1
+	LDA	=8=
+	SLC	5
+	ENTA	0	5
+	DIV	STACK,1
+	JOV	OVERFLOW
+	DEC1	1
+	JMP	PRINTI
+* Float literal: 0.000000
+	LDA	=0=
+	INC1	1
+	STA	STACK,1
+	LDA	=8=
+	FLOT
+	FDIV	STACK,1
+	JOV	OVERFLOW
+	DEC1	1
+	JMP	PRINTF
+	LDA	=0=
+	INC1	1
+	STA	STACK,1
+	LDA	=8=
+	SLC	5
+	ENTA	0	5
+	DIV	STACK,1
+	JOV	OVERFLOW
+	DEC1	1
+	JMP	PRINTI
+	HLT
+* STANDARD LIBRARY
+* J AND I6 ARE USED FOR CALL/RETURN
+* VOID PRINTI(INT A)
+PRINTI	STJ	SV1,1
+	LDX	INTP	SHOW INT +
+	JANN	1F
+	LDX	INTN	SHOW INT -
+1H	STX	LPLINE
+	CHAR
+	STA	LPLINE+1
+	STX	LPLINE+2
+	STZ	LPLINE+3
+	OUT	LPLINE(LP)
+	JBUS	*(LP)
+	LD6	SV1,1(1:2)
+	JSJ	0,6
+* VOID PRINTF(FLOAT A)
+PRINTF	STJ	SV1,1
+	LDX	FLTP	SHOW TYPE AND SIGN
+	JANN	1F
+	LDX	FLTN
+1H	STX	LPLINE
+	STA	SV2,1	A=ABS(A)
+	LDA	SV2,1(1:5)	OMIT SIGN
+	STA	SV2,1	SV2=ABS(A)
+	FIX
+	STA	SV3,1	SV3=ROUND(A)
+	LDX	SV3,1	X=SV3
+	FLOT
+	FSUB	SV2,1	A=SV3-SV2
+	JAN	1F	NO JUMP IF ROUND(A)>A
+	DECX	1
+	STX	SV3,1	SV3=SV3-1
+1H	LDA	SV3,1
+	CHAR
+	STA	LPLINE+1
+	STX	LPLINE+2
+* NOW FOR THE FRACTIONAL PART
+	LDAN	SV3,1
+	FLOT
+	FADD	SV2,1	NOW A=FRACTION
+	STA	SV2,1
+	LDA	=10000=
+	FLOT
+	FMUL	SV2,1
+	FIX
+	CMPA	=9999=
+	JLE	1F
+	LDA	=9999=
+1H	CHAR
+	STX	LPLINE+3
+	LDA	=40=
+	STA	LPLINE+3(1:1)
+	OUT	LPLINE(LP)
+	JBUS	*(LP)
+	LD6	SV1,1(1:2)
+	JSJ	0,6
+* VOID OVERFLOW(T_DIV)
+OVERFLOW	NOP
+	LDA	OVFL
+	STA	LPLINE
+	LDA	OVFL+1
+	STA	LPLINE+1
+	STZ	LPLINE+2
+	STZ	LPLINE+3
+	OUT	LPLINE(LP)
+	JBUS	*(LP)
+	HLT
+	END	MAIN
+* --------------------
+* ABSTRACT SYNTAX TREE
+* --------------------
+* PROGRAM(none): Expression
+*   T_ID(none): Expression,V0
+*   COMP_STMT(none): st=()
+*     STMT_LIST(none): 
+*       STMT_LIST(none): 
+*         STMT_LIST(none): 
+*           STMT_LIST(none): 
+*             STMT_LIST(none): 
+*               STMT_LIST(none): 
+*                 STMT_LIST(none): 
+*                   STMT_LIST(none): 
+*                     STMT_LIST(none): 
+*                       STMT_LIST(none): 
+*                         STMT_LIST(none): 
+*                           STMT_LIST(none): 
+*                             STMT_LIST(none): 
+*                               STMT_LIST(none): 
+*                                 T_PRINTLN(none): 
+*                                   T_NUM(int): 1
+*                                 T_PRINTLN(none): 
+*                                   UMINUS(int): 
+*                                     T_NUM(int): 4
+*                               T_PRINTLN(none): 
+*                                 *(int): 
+*                                   UMINUS(int): 
+*                                     UMINUS(int): 
+*                                       T_NUM(int): 1
+*                                   T_NUM(int): 3
+*                             T_PRINTLN(none): 
+*                               *(int): 
+*                                 -(int): 
+*                                   T_NUM(int): 0
+*                                   T_NUM(int): 2
+*                                 T_NUM(int): 3
+*                           T_PRINTLN(none): 
+*                             -(float): 
+*                               T_NUM(float): 0.000000
+*                               T_NUM(float): 0.999999
+*                         T_PRINTLN(none): 
+*                           T_NUM(float): 5.600000
+*                       T_PRINTLN(none): 
+*                         -(float): 
+*                           T_NUM(int): 0
+*                           T_NUM(float): 123.456001
+*                     T_PRINTLN(none): 
+*                       UMINUS(float): 
+*                         T_NUM(float): 123.456001
+*                   T_PRINTLN(none): 
+*                     *(float): 
+*                       T_NUM(float): 1.200000
+*                       T_NUM(float): 3.000000
+*                 T_PRINTLN(none): 
+*                   *(float): 
+*                     T_NUM(float): 1.200000
+*                     T_NUM(int): 3
+*               T_PRINTLN(none): 
+*                 /(float): 
+*                   T_NUM(float): 8.000000
+*                   UMINUS(int): 
+*                     T_NUM(int): 3
+*             T_PRINTLN(none): 
+*               /(float): 
+*                 UMINUS(int): 
+*                   T_NUM(int): 8
+*                 T_NUM(float): 3.000000
+*           T_PRINTLN(none): 
+*             /(int): 
+*               T_NUM(int): 8
+*               T_NUM(int): 3
+*         T_PRINTLN(none): 
+*           /(float): 
+*             T_NUM(int): 8
+*             T_NUM(float): 0.000000
+*       T_PRINTLN(none): 
+*         /(int): 
+*           T_NUM(int): 8
+*           T_NUM(int): 0

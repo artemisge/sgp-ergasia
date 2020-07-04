@@ -1,0 +1,219 @@
+* PROGRAM Booleans
+EPSILON	CON	0	TOLERANCE OF FCMP
+* VARIABLES
+LP	EQU	18	LINE PRINTER
+LPLINE	ORIG	*+24	ITS OUTPUT BUFFER
+STACK	ORIG	*+32	STACK, I1=TOP
+* STRINGS
+FLTP	ALF	FLT +
+FLTN	ALF	FLT -
+INTP	ALF	INT +
+INTN	ALF	INT -
+OVFL	ALF	*OVER
+	ALF	FLOW*
+* DEFINES
+* ALWAYS USE SVx,1 NEVER SVx:
+SV1	EQU	STACK+1	STACK VARIABLE 1
+SV2	EQU	STACK+2	STACK VARIABLE 2
+SV3	EQU	STACK+3	STACK VARIABLE 3
+SV4	EQU	STACK+4	STACK VARIABLE 4
+MAIN	ENT1	0	STACK POINTER=0
+	LDA	=2=
+	INC1	1
+	STA	STACK,1
+	LDA	=1=
+	DEC1	1
+	CMPA	STACK+1,1
+	JL	1F
+	ENTA	0
+	JMP	2F
+1H	ENTA	1
+2H	NOP
+	CMPA	=1=
+	JNE	I0A
+	LDA	=1=
+	JMP	PRINTI
+	JMP	I0B
+I0A	NOP
+	LDA	=0=
+	JMP	PRINTI
+I0B	NOP
+	LDA	=2=
+	INC1	1
+	STA	STACK,1
+	LDA	=1=
+	DEC1	1
+	CMPA	STACK+1,1
+	JG	1F
+	ENTA	0
+	JMP	2F
+1H	ENTA	1
+2H	NOP
+	CMPA	=1=
+	JNE	I1A
+	LDA	=0=
+	JMP	PRINTI
+	JMP	I1B
+I1A	NOP
+	LDA	=1=
+	JMP	PRINTI
+I1B	NOP
+	LDA	=2=
+	FLOT
+	INC1	1
+	STA	STACK,1
+* Float literal: 1.000000
+	LDA	=553910272=
+	DEC1	1
+	FCMP	STACK+1,1
+	JL	1F
+	ENTA	0
+	JMP	2F
+1H	ENTA	1
+2H	NOP
+	CMPA	=1=
+	JNE	I2A
+	LDA	=1=
+	JMP	PRINTI
+	JMP	I2B
+I2A	NOP
+	LDA	=0=
+	JMP	PRINTI
+I2B	NOP
+* Float literal: 2.000000
+	LDA	=554172416=
+	INC1	1
+	STA	STACK,1
+* Float literal: 1.000000
+	LDA	=553910272=
+	DEC1	1
+	FCMP	STACK+1,1
+	JG	1F
+	ENTA	0
+	JMP	2F
+1H	ENTA	1
+2H	NOP
+	CMPA	=1=
+	JNE	I3A
+	LDA	=0=
+	JMP	PRINTI
+	JMP	I3B
+I3A	NOP
+	LDA	=1=
+	JMP	PRINTI
+I3B	NOP
+	HLT
+* STANDARD LIBRARY
+* J AND I6 ARE USED FOR CALL/RETURN
+* VOID PRINTI(INT A)
+PRINTI	STJ	SV1,1
+	LDX	INTP	SHOW INT +
+	JANN	1F
+	LDX	INTN	SHOW INT -
+1H	STX	LPLINE
+	CHAR
+	STA	LPLINE+1
+	STX	LPLINE+2
+	STZ	LPLINE+3
+	OUT	LPLINE(LP)
+	JBUS	*(LP)
+	LD6	SV1,1(1:2)
+	JSJ	0,6
+* VOID PRINTF(FLOAT A)
+PRINTF	STJ	SV1,1
+	LDX	FLTP	SHOW TYPE AND SIGN
+	JANN	1F
+	LDX	FLTN
+1H	STX	LPLINE
+	STA	SV2,1	A=ABS(A)
+	LDA	SV2,1(1:5)	OMIT SIGN
+	STA	SV2,1	SV2=ABS(A)
+	FIX
+	STA	SV3,1	SV3=ROUND(A)
+	LDX	SV3,1	X=SV3
+	FLOT
+	FSUB	SV2,1	A=SV3-SV2
+	JAN	1F	NO JUMP IF ROUND(A)>A
+	DECX	1
+	STX	SV3,1	SV3=SV3-1
+1H	LDA	SV3,1
+	CHAR
+	STA	LPLINE+1
+	STX	LPLINE+2
+* NOW FOR THE FRACTIONAL PART
+	LDAN	SV3,1
+	FLOT
+	FADD	SV2,1	NOW A=FRACTION
+	STA	SV2,1
+	LDA	=10000=
+	FLOT
+	FMUL	SV2,1
+	FIX
+	CMPA	=9999=
+	JLE	1F
+	LDA	=9999=
+1H	CHAR
+	STX	LPLINE+3
+	LDA	=40=
+	STA	LPLINE+3(1:1)
+	OUT	LPLINE(LP)
+	JBUS	*(LP)
+	LD6	SV1,1(1:2)
+	JSJ	0,6
+* VOID OVERFLOW(T_DIV)
+OVERFLOW	NOP
+	LDA	OVFL
+	STA	LPLINE
+	LDA	OVFL+1
+	STA	LPLINE+1
+	STZ	LPLINE+2
+	STZ	LPLINE+3
+	OUT	LPLINE(LP)
+	JBUS	*(LP)
+	HLT
+	END	MAIN
+* --------------------
+* ABSTRACT SYNTAX TREE
+* --------------------
+* PROGRAM(none): Booleans
+*   T_ID(none): Booleans,V0
+*   COMP_STMT(none): st=()
+*     STMT_LIST(none): 
+*       STMT_LIST(none): 
+*         STMT_LIST(none): 
+*           IF_STMT(none): 
+*             BOOL_EXPR(none): 
+*               T_NUM(int): 2
+*               >(none): 
+*               T_NUM(int): 1
+*             T_PRINTLN(none): 
+*               T_NUM(int): 1
+*             T_PRINTLN(none): 
+*               T_NUM(int): 0
+*           IF_STMT(none): 
+*             BOOL_EXPR(none): 
+*               T_NUM(int): 2
+*               <(none): 
+*               T_NUM(int): 1
+*             T_PRINTLN(none): 
+*               T_NUM(int): 0
+*             T_PRINTLN(none): 
+*               T_NUM(int): 1
+*         IF_STMT(none): 
+*           BOOL_EXPR(none): 
+*             T_NUM(int): 2
+*             >(none): 
+*             T_NUM(float): 1.000000
+*           T_PRINTLN(none): 
+*             T_NUM(int): 1
+*           T_PRINTLN(none): 
+*             T_NUM(int): 0
+*       IF_STMT(none): 
+*         BOOL_EXPR(none): 
+*           T_NUM(float): 2.000000
+*           <(none): 
+*           T_NUM(float): 1.000000
+*         T_PRINTLN(none): 
+*           T_NUM(int): 0
+*         T_PRINTLN(none): 
+*           T_NUM(int): 1

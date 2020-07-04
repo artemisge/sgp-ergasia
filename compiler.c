@@ -28,7 +28,7 @@ void add_to_symbol_table(node *n, expr_type et) {
 }
 
 void assemble(node *n) {
-    int i;
+    int i, myfi;
     char buf1[100] = "";
 
     assert(n != NULL);
@@ -50,6 +50,8 @@ void assemble(node *n) {
                 "FLTN\tALF\tFLT -\n"
                 "INTP\tALF\tINT +\n"
                 "INTN\tALF\tINT -\n"
+                "OVFL\tALF\t*OVER\n"
+                "\tALF\tFLOW*\n"
                 "* DEFINES\n"
                 "* ALWAYS USE SVx,1 NEVER SVx:\n"
                 "SV1\tEQU\tSTACK+1\tSTACK VARIABLE 1\n"
@@ -64,10 +66,10 @@ void assemble(node *n) {
                 "* STANDARD LIBRARY\n"
                 "* J AND I6 ARE USED FOR CALL/RETURN\n"
                 "* VOID PRINTI(INT A)\n"
-                "PRINTI\tSTJ\tSV1,1\n"
-                "\tLDX\tINTP\tSHOW TYPE AND SIGN\n"
-                "\tJANN\t1F\n"
-                "\tLDX\tINTN\n"
+                "PRINTI\tSTJ\tSV1,1\n"  // Store return address
+                "\tLDX\tINTP\tSHOW INT +\n"
+                "\tJANN\t1F\n"  // Jump if A<0
+                "\tLDX\tINTN\tSHOW INT -\n"
                 "1H\tSTX\tLPLINE\n"
                 "\tCHAR\n"
                 "\tSTA\tLPLINE+1\n"
@@ -77,14 +79,19 @@ void assemble(node *n) {
                 "\tJBUS\t*(LP)\n"
                 "\tLD6\tSV1,1(1:2)\n"
                 "\tJSJ\t0,6\n"
+
                 "* VOID PRINTF(FLOAT A)\n"
                 "PRINTF\tSTJ\tSV1,1\n"
                 "\tLDX\tFLTP\tSHOW TYPE AND SIGN\n"
                 "\tJANN\t1F\n"
                 "\tLDX\tFLTN\n"
                 "1H\tSTX\tLPLINE\n"
-                "\tSTA\tSV2,1(1:5)\tOMIT SIGN\n"
-                "\tLDA\tSV2,1\tA=ABS(A)\n"
+                // Normally we'd use STA SV2,1(0:5) to store ABS(A),
+                // but MIXBuilder has a bug with STA and negatives
+                // and byte ranges, and stores 6363636363-A instead
+                "\tSTA\tSV2,1\tA=ABS(A)\n"
+                "\tLDA\tSV2,1(1:5)\tOMIT SIGN\n"
+                "\tSTA\tSV2,1\tSV2=ABS(A)\n"
                 "\tFIX\n"
                 "\tSTA\tSV3,1\tSV3=ROUND(A)\n"
                 "\tLDX\tSV3,1\tX=SV3\n"
@@ -117,6 +124,19 @@ void assemble(node *n) {
                 "\tJBUS\t*(LP)\n"
                 "\tLD6\tSV1,1(1:2)\n"
                 "\tJSJ\t0,6\n"
+
+                "* VOID OVERFLOW(T_DIV)\n"
+                "OVERFLOW\tNOP\n"
+                // We are here because of the mixal instruction JOV, means overflow happened
+                "\tLDA\tOVFL\n"
+                "\tSTA\tLPLINE\n"
+                "\tLDA\tOVFL+1\n"
+                "\tSTA\tLPLINE+1\n"
+                "\tSTZ\tLPLINE+2\n"
+                "\tSTZ\tLPLINE+3\n"
+                "\tOUT\tLPLINE(LP)\n"
+                "\tJBUS\t*(LP)\n"
+                "\tHLT\n"
                 "\tEND\tMAIN\n"
                 );
             break;
@@ -159,35 +179,41 @@ void assemble(node *n) {
             ii++;
             break;
         case FOR_STMT:
-        //if there are no optional declaration/bool/update expressions it will be an endless-loop
+            myfi=fi++;
+        //if there are no optional assignment/bool/update expressions it will be an endless-loop
             if (n->cn.nodes[0] != NULL)
-                assemble(n->cn.nodes[0]); //optional declaration
-            printf("F%dA\tNOP\n", fi); //LABEL to return to
+                assemble(n->cn.nodes[0]); //optional assignment
+            printf("F%dA\tNOP\n", myfi); //LABEL to return to
             if (n->cn.nodes[1] != NULL) {
                 assemble(n->cn.nodes[1]); //optional bool expr
                 printf(
                     "\tCMPA\t=1=\n"
                     "\tJNE\tF%dB\n" //end-loop
-                    , fi);
+                    , myfi);
             }
             assemble(n->cn.nodes[3]); // statement
             if (n->cn.nodes[2] != NULL) {
                 assemble(n->cn.nodes[2]); //optional loop-update expr
             }
-            printf("\tJMP\tF%dA\n", fi); //go back to bool expr
-            printf("F%dB\tNOP\n", fi); //end-loop LABEL
-            fi++;
+            printf("\tJMP\tF%dA\n", myfi); //go back to bool expr
+            printf("F%dB\tNOP\n", myfi); //end-loop LABEL
             break;
         case BOOL_EXPR:
             assemble(n->cn.nodes[0]);
+            if ((n->cn.nodes[0]->et == ET_INT && n->cn.nodes[2]->et == ET_FLOAT))
+                // CONVERT left child TO FLOAT
+                printf("\tFLOT\n");
             printf("\tINC1\t1\n");
             printf("\tSTA\tSTACK,1\n");
             assemble(n->cn.nodes[2]);
-            // TODO: support floats here
-            printf(
-                "\tDEC1\t1\n"
-                "\tCMPA\tSTACK+1,1\n"
-                );
+            if ((n->cn.nodes[2]->et == ET_INT && n->cn.nodes[0]->et == ET_FLOAT))
+                // CONVERT right child TO FLOAT
+                printf("\tFLOT\n");
+            printf("\tDEC1\t1\n");
+            if ((n->cn.nodes[0]->et == ET_FLOAT || n->cn.nodes[2]->et == ET_FLOAT))
+                printf("\tFCMP\tSTACK+1,1\n");
+            else
+                printf("\tCMPA\tSTACK+1,1\n");
             // We do the opposite comparison, 2 op 1
             switch (n->cn.nodes[1]->nt) {
                 case T_EQEQ:
@@ -226,49 +252,49 @@ void assemble(node *n) {
                 else
                     sprintf(buf1, "\tADD\tSTACK,1\n");
         case '-':
-            if (!buf1[0]) {
+            if (!buf1[0])
                 if (n->cn.nodes[0]->et == ET_FLOAT || n->cn.nodes[1]->et == ET_FLOAT)
                     sprintf(buf1, "\tFSUB\tSTACK,1\n");
                 else
                     sprintf(buf1, "\tSUB\tSTACK,1\n");
-            }
         case '*':
             if (!buf1[0])
                 if (n->cn.nodes[0]->et == ET_FLOAT || n->cn.nodes[1]->et == ET_FLOAT)
                     sprintf(buf1,
-                    "\tFMUL\tSTACK,1\n"
-                    "\tSLC\t5\n");
+                        "\tFMUL\tSTACK,1\n");
                 else
                     sprintf(buf1,
-                    "\tMUL\tSTACK,1\n"
-                    "\tSLC\t5\n");
+                        "\tMUL\tSTACK,1\n"
+                        "\tSLC\t5\n");
         case '/':
             if (!buf1[0])
-                sprintf(buf1,
-                    "\tSLC\t5\n"
-                    "\tDIV\tSTACK,1\n");
+                if (n->cn.nodes[0]->et == ET_FLOAT || n->cn.nodes[1]->et == ET_FLOAT)
+                    sprintf(buf1,
+                        "\tFDIV\tSTACK,1\n");
+                else
+                    sprintf(buf1,
+                        "\tSLC\t5\n"
+                        "\tENTA\t0\t5\n"
+                        "\tDIV\tSTACK,1\n");
         case '2':  // All expression nodes with 2 childs
-            assemble(n->cn.nodes[0]);
-            if (n->cn.nodes[0]->et == ET_INT && n->cn.nodes[1]->et == ET_FLOAT)
-                // CONVERT IT TO FLOAT
+            assemble(n->cn.nodes[1]);
+            if ((n->cn.nodes[1]->et == ET_INT && n->cn.nodes[0]->et == ET_FLOAT))
+                // CONVERT right child TO FLOAT
                 printf("\tFLOT\n");
             printf("\tINC1\t1\n");
             printf("\tSTA\tSTACK,1\n");
-            assemble(n->cn.nodes[1]);
+            assemble(n->cn.nodes[0]);
+            if ((n->cn.nodes[0]->et == ET_INT && n->cn.nodes[1]->et == ET_FLOAT))
+                // CONVERT left child TO FLOAT
+                printf("\tFLOT\n");
             printf("%s", buf1);
+            printf("\tJOV\tOVERFLOW\n");
             printf("\tDEC1\t1\n");
             break;
         case UMINUS:
-            // printf("A=-A"), des PRINTI gia xeirismo proshmou
-            //-(x+2) == node nt==uminus me paidi[0]==x+2
-            assemble(n->cn.nodes[0]); //return result in rA
-            printf("\tINC1\t1\n");
-            printf("\tSTA\tSTACK,1\n");
-            printf("\tLDAN\tSTACK,1\n");
-            printf("\tDEC1\t1\n");
-            printf("\tINC1\t1\n");
-            printf("\tSTA\tSTACK,1\n");
-            printf("\tJMP\tPRINTI\n");
+            assemble(n->cn.nodes[0]);
+            printf("\tSTA\tSV1,1\n");
+            printf("\tLDAN\tSV1,1\n");
             break;
         case T_ID:
             printf("\tLDA\tV%d\n", n->vi);
@@ -288,6 +314,10 @@ void assemble(node *n) {
             for (i = 0; i < n->cn.length; i++)
                 assemble(n->cn.nodes[i]);
     }
+}
+
+void debuuug(char *s) {
+    fprintf(stderr, "DEBUUUG: %s", s);
 }
 
 node *create_node(node_type nt, node *c0, node *c1, node *c2, node *c3) {
@@ -514,10 +544,10 @@ void semantic_bottom_up(node *n) {
         case '-':
         case '*':
         case '/':
-            if (n->cn.nodes[0]->et == ET_INT && n->cn.nodes[1]->et == ET_INT)
-                n->et = ET_INT;
-            else
+            if (n->cn.nodes[0]->et == ET_FLOAT || n->cn.nodes[1]->et == ET_FLOAT)
                 n->et = ET_FLOAT;
+            else
+                n->et = ET_INT;
             break;
         case UMINUS:
             n->et = n->cn.nodes[0]->et;

@@ -33,13 +33,3 @@ As proposed in [TAOCP->MIXware](https://www-cs-faculty.stanford.edu/~knuth/taocp
 * http://www.jklp.org/profession/books/mix/index.html
 * https://en.wikipedia.org/wiki/MIX
 * https://esolangs.org/wiki/MIX_(Knuth): floats, character set etc
-
-# TODO
-
-* Auto-upgrade integers to floats when needed
-* Fix +, -, *, /
-* Fix C_OP for floats
-* Implement UMINUS
-* Implement FOR_STMT
-* Add documentation
-* Replace =LITERALS= with CONstants and comments, for readability
